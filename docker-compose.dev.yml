@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: invoicer
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/invoicer
+      PORT: "4000"
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    depends_on:
+      - backend
+
+volumes:
+  pgdata_dev:
