@@ -91,6 +91,10 @@ export default function InvoiceDetailPage() {
     if (Number(invoice.credits_applied) > 0) {
       totalsHtml += `<tr><td colspan="3" style="padding:8px;text-align:right;color:#16a34a">Credits Applied</td>
         <td style="padding:8px;text-align:right;color:#16a34a">-$${Number(invoice.credits_applied).toFixed(2)}</td></tr>`;
+      (invoice.credits || []).forEach((c) => {
+        totalsHtml += `<tr><td colspan="3" style="padding:4px 8px;text-align:right;color:#16a34a;font-size:12px;padding-left:32px">${c.description}</td>
+          <td style="padding:4px 8px;text-align:right;color:#16a34a;font-size:12px">-$${Number(c.amount).toFixed(2)}</td></tr>`;
+      });
     }
     totalsHtml += `<tr style="border-top:2px solid #111"><td colspan="3" style="padding:8px;text-align:right;font-weight:bold;font-size:1.1em">Total</td>
       <td style="padding:8px;text-align:right;font-weight:bold;font-size:1.1em">$${Number(invoice.total).toFixed(2)}</td></tr>`;
@@ -249,10 +253,18 @@ export default function InvoiceDetailPage() {
             </div>
           )}
           {Number(invoice.credits_applied) > 0 && (
-            <div className="flex justify-between py-1 text-green-600">
-              <span>Credits Applied</span>
-              <span>-${Number(invoice.credits_applied).toFixed(2)}</span>
-            </div>
+            <>
+              <div className="flex justify-between py-1 text-green-600">
+                <span>Credits Applied</span>
+                <span>-${Number(invoice.credits_applied).toFixed(2)}</span>
+              </div>
+              {(invoice.credits || []).map((c) => (
+                <div key={c.id} className="flex justify-between py-0.5 text-xs text-green-500 pl-4">
+                  <span>{c.description}</span>
+                  <span>-${Number(c.amount).toFixed(2)}</span>
+                </div>
+              ))}
+            </>
           )}
           <div className="flex justify-between py-1 font-bold text-lg border-t mt-2 pt-2">
             <span>Total</span>

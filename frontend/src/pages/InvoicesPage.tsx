@@ -79,8 +79,9 @@ export default function InvoicesPage() {
                 <th className="text-left p-3">Client</th>
                 <th className="text-left p-3">Date</th>
                 <th className="text-left p-3">Due</th>
-                <th className="text-left p-3">Total</th>
-                <th className="text-left p-3">Credits</th>
+                <th className="text-right p-3">Billed</th>
+                <th className="text-right p-3">Credits</th>
+                <th className="text-right p-3">Total</th>
                 <th className="text-left p-3">Status</th>
               </tr>
             </thead>
@@ -95,8 +96,9 @@ export default function InvoicesPage() {
                   <td className="p-3">{inv.client_name}</td>
                   <td className="p-3">{new Date(inv.issue_date).toLocaleDateString()}</td>
                   <td className="p-3">{new Date(inv.due_date).toLocaleDateString()}</td>
-                  <td className="p-3 font-medium">${Number(inv.total).toFixed(2)}</td>
-                  <td className="p-3">{Number(inv.credits_applied) > 0 ? `-$${Number(inv.credits_applied).toFixed(2)}` : '-'}</td>
+                  <td className="p-3 text-right">${Number(inv.subtotal).toFixed(2)}</td>
+                  <td className="p-3 text-right">{Number(inv.credits_applied) > 0 ? `-$${Number(inv.credits_applied).toFixed(2)}` : '-'}</td>
+                  <td className="p-3 text-right font-medium">${Number(inv.total).toFixed(2)}</td>
                   <td className="p-3">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[inv.status]}`}>
                       {inv.status}

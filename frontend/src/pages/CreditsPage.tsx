@@ -93,7 +93,7 @@ export default function CreditsPage() {
       )}
 
       <p className="text-sm text-gray-500 mb-4">
-        Credits represent prepayments or adjustments that can be applied to future invoices. When creating an invoice, you can select available credits to reduce the total.
+        Credits represent prepayments or adjustments. Available credits are automatically applied when creating an invoice.
       </p>
 
       {isLoading ? (

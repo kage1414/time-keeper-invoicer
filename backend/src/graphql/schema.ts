@@ -165,7 +165,6 @@ export const typeDefs = `#graphql
     time_entry_ids: [Int!]
     credit_ids: [Int!]
     credit_time_entry_ids: [Int!]
-    apply_credits: Boolean
   }
 
   input CreateCreditInput {

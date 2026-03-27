@@ -80,7 +80,6 @@ export default function CreateInvoicePage() {
             notes: notes || null,
             time_entry_ids: billIds,
             credit_time_entry_ids: [...creditUnbilledIds, ...Array.from(billedCredits)],
-            apply_credits: true,
           },
         }
       );

@@ -94,7 +94,10 @@ export const resolvers = {
         .first();
       if (!invoice) return null;
       const line_items = await db('invoice_line_items').where('invoice_id', id).orderBy('id');
-      const credits = await db('credits').where('applied_invoice_id', id);
+      const credits = await db('credits')
+        .join('clients', 'credits.client_id', 'clients.id')
+        .select('credits.*', 'clients.name as client_name')
+        .where('applied_invoice_id', id);
       return { ...invoice, line_items, credits };
     },
 
@@ -303,7 +306,7 @@ export const resolvers = {
     },
 
     createInvoice: async (_: any, { input }: any) => {
-      const { client_id, issue_date, due_date, tax_rate, notes, time_entry_ids, credit_ids, credit_time_entry_ids, apply_credits } = input;
+      const { client_id, issue_date, due_date, tax_rate, notes, time_entry_ids, credit_ids, credit_time_entry_ids } = input;
 
       const last = await db('invoices').orderBy('id', 'desc').first();
       const invoice_number = last
@@ -345,6 +348,8 @@ export const resolvers = {
         }
       }
 
+      let credits_applied = 0;
+
       if (credit_time_entry_ids?.length) {
         const creditEntries = await db('time_entries')
           .join('projects', 'time_entries.project_id', 'projects.id')
@@ -357,29 +362,27 @@ export const resolvers = {
           await db('credits').insert({
             client_id,
             amount,
-            remaining_amount: amount,
+            remaining_amount: 0,
             description: `Credit for: ${entry.project_name} - ${entry.description || 'Time entry'}`,
             source_invoice_id: entry.invoice_id,
+            applied_invoice_id: invoice.id,
           });
+          credits_applied += amount;
         }
       }
 
-      let credits_applied = 0;
-      const creditsToApply = credit_ids?.length
-        ? await db('credits').whereIn('id', credit_ids).where('remaining_amount', '>', 0).orderBy('created_at')
-        : apply_credits
-          ? await db('credits').where('client_id', client_id).where('remaining_amount', '>', 0).orderBy('created_at')
-          : [];
-
-      const totalBeforeCredits = subtotal + subtotal * ((tax_rate || 0) / 100);
-      for (const credit of creditsToApply) {
-        if (credits_applied >= totalBeforeCredits) break;
-        const toApply = Math.min(Number(credit.remaining_amount), totalBeforeCredits - credits_applied);
-        await db('credits').where('id', credit.id).update({
-          remaining_amount: Number(credit.remaining_amount) - toApply,
-          applied_invoice_id: invoice.id,
-        });
-        credits_applied += toApply;
+      if (credit_ids?.length) {
+        const creditsToApply = await db('credits').whereIn('id', credit_ids).where('remaining_amount', '>', 0).orderBy('created_at');
+        const totalBeforeCredits = subtotal + subtotal * ((tax_rate || 0) / 100);
+        for (const credit of creditsToApply) {
+          if (credits_applied >= totalBeforeCredits) break;
+          const toApply = Math.min(Number(credit.remaining_amount), totalBeforeCredits - credits_applied);
+          await db('credits').where('id', credit.id).update({
+            remaining_amount: Number(credit.remaining_amount) - toApply,
+            applied_invoice_id: invoice.id,
+          });
+          credits_applied += toApply;
+        }
       }
 
       const tax_amount = subtotal * ((tax_rate || 0) / 100);
