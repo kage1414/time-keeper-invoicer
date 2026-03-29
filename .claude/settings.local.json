@@ -14,7 +14,9 @@
       "Bash(docker-compose -f docker-compose.dev.yml logs --tail=50 backend)",
       "Bash(docker-compose -f docker-compose.dev.yml up --build -d)",
       "Bash(docker-compose -f docker-compose.dev.yml logs --tail=20 backend)",
-      "Bash(docker-compose -f docker-compose.dev.yml up --build -d frontend)"
+      "Bash(docker-compose -f docker-compose.dev.yml up --build -d frontend)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

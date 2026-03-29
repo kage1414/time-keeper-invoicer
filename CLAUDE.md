@@ -21,6 +21,7 @@ ALWAYS do the following on every meaningful response:
 3. Output BOTH updated files at the end of your response:
    - Full updated TASKS.md
    - Full updated CLAUDE.md
+   - Commit changes before moving on to the next item
 
 4. Never skip updates, even if not explicitly asked.
 5. Treat these files as the source of truth.
