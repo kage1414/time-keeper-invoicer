@@ -25,7 +25,8 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-600">TimeKeeper</h1>
+          <img src="/logo.png" alt="TimeForge" className="h-16 w-16 mx-auto mb-3" />
+          <h1 className="text-3xl font-bold text-indigo-600">TimeForge</h1>
           <p className="text-gray-500 mt-2">Sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">

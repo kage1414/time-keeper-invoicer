@@ -44,8 +44,9 @@ export default function App() {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="text-xl font-bold text-indigo-600">
-              TimeKeeper
+            <Link to="/" className="flex items-center space-x-2">
+              <img src="/logo.png" alt="TimeForge" className="h-8 w-8" />
+              <span className="text-xl font-bold text-indigo-600">TimeForge</span>
             </Link>
             <div className="flex items-center space-x-1">
               {navItems.map((item) => (
