@@ -109,6 +109,13 @@ export interface UserSettings {
   paypal: string;
   zelle: string;
   default_due_days: number | null;
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_user: string | null;
+  smtp_pass: string | null;
+  smtp_secure: boolean | null;
+  smtp_from_email: string | null;
+  smtp_from_name: string | null;
   updated_at: string;
 }
 
@@ -145,5 +152,4 @@ export interface Dashboard {
   unbilled_amount: number;
   recent_invoices: Invoice[];
   outstanding_amount: number;
-  available_credits: number;
 }

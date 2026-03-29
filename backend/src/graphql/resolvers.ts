@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import { GraphQLError } from 'graphql';
 import db from '../db';
 import { JWT_SECRET, Context } from '../index';
@@ -207,10 +208,6 @@ export const resolvers = {
         .where('user_id', user.id)
         .whereIn('status', ['sent', 'overdue'])
         .sum('total as total');
-      const availableCredits = await db('credits')
-        .where('user_id', user.id)
-        .where('remaining_amount', '>', 0)
-        .sum('remaining_amount as total');
       return {
         total_clients: Number(totalClients.count),
         active_projects: Number(totalProjects.count),
@@ -219,7 +216,6 @@ export const resolvers = {
         unbilled_amount: parseFloat(parseFloat(unbilledEntries[0]?.total_amount || '0').toFixed(2)),
         recent_invoices: recentInvoices,
         outstanding_amount: parseFloat(outstandingAmount[0]?.total || '0'),
-        available_credits: parseFloat(availableCredits[0]?.total || '0'),
       };
     },
 
@@ -648,6 +644,108 @@ export const resolvers = {
           .returning('*');
         return settings;
       }
+    },
+
+    sendInvoice: async (_: any, { id, to }: { id: number; to: string }, context: Context) => {
+      const user = requireAuth(context);
+      const settings = await db('user_settings').where('user_id', user.id).first();
+      if (!settings?.smtp_host || !settings?.smtp_user || !settings?.smtp_pass) {
+        throw new GraphQLError('SMTP settings not configured. Go to Settings to set up email.');
+      }
+
+      const invoice = await db('invoices')
+        .join('clients', 'invoices.client_id', 'clients.id')
+        .select('invoices.*', 'clients.name as client_name', 'clients.company as client_company')
+        .where('invoices.id', id)
+        .where('invoices.user_id', user.id)
+        .first();
+      if (!invoice) throw new GraphQLError('Invoice not found');
+
+      const lineItems = await db('invoice_line_items').where('invoice_id', id).orderBy('id');
+      const credits = await db('credits').where('applied_invoice_id', id);
+
+      const fromName = settings.smtp_from_name || settings.first_name
+        ? `${settings.first_name || ''} ${settings.last_name || ''}`.trim()
+        : 'TimeForge';
+      const fromEmail = settings.smtp_from_email || settings.smtp_user;
+
+      const issueDate = new Date(invoice.issue_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const dueDate = invoice.issue_date === invoice.due_date
+        ? 'Upon Receipt'
+        : new Date(invoice.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const lineItemsHtml = lineItems.map((li: any) => {
+        const desc = li.description.replace(/\n/g, '<br/>');
+        return `<tr>
+          <td style="padding:8px;border-bottom:1px solid #eee">${desc}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${Number(li.quantity).toFixed(2)}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${Number(li.rate).toFixed(2)}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${Number(li.amount).toFixed(2)}</td>
+        </tr>`;
+      }).join('');
+
+      const creditsTotal = credits.reduce((sum: number, c: any) => sum + Number(c.amount), 0);
+
+      let paymentMethodsHtml = '';
+      const methods = [
+        { label: 'Venmo', value: settings.venmo },
+        { label: 'Cash App', value: settings.cashapp },
+        { label: 'PayPal', value: settings.paypal },
+        { label: 'Zelle', value: settings.zelle },
+      ].filter(m => m.value);
+      if (methods.length > 0) {
+        paymentMethodsHtml = `
+          <div style="margin-top:24px;padding:16px;background:#f9fafb;border-radius:8px">
+            <h3 style="margin:0 0 8px;font-size:14px;color:#374151">Payment Methods</h3>
+            ${methods.map(m => `<p style="margin:4px 0;font-size:13px;color:#6b7280"><strong>${m.label}:</strong> ${m.value}</p>`).join('')}
+          </div>`;
+      }
+
+      const html = `
+        <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#111827">
+          <h1 style="color:#4f46e5;font-size:24px">Invoice #${invoice.invoice_number}</h1>
+          <p style="color:#6b7280">To: <strong>${invoice.client_name}</strong>${invoice.client_company ? ` (${invoice.client_company})` : ''}</p>
+          <p style="color:#6b7280">Issue Date: ${issueDate} &nbsp;|&nbsp; Due: ${dueDate}</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <thead>
+              <tr style="background:#f3f4f6">
+                <th style="padding:8px;text-align:left">Description</th>
+                <th style="padding:8px;text-align:right">Hours</th>
+                <th style="padding:8px;text-align:right">Rate</th>
+                <th style="padding:8px;text-align:right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>${lineItemsHtml}</tbody>
+          </table>
+          <div style="text-align:right;margin-top:16px">
+            <p style="margin:4px 0;font-size:14px;color:#6b7280">Subtotal: $${Number(invoice.subtotal).toFixed(2)}</p>
+            ${Number(invoice.tax_amount) > 0 ? `<p style="margin:4px 0;font-size:14px;color:#6b7280">Tax (${Number(invoice.tax_rate)}%): $${Number(invoice.tax_amount).toFixed(2)}</p>` : ''}
+            ${creditsTotal > 0 ? `<p style="margin:4px 0;font-size:14px;color:#059669">Credits: -$${creditsTotal.toFixed(2)}</p>` : ''}
+            <p style="margin:8px 0 0;font-size:20px;font-weight:bold;color:#111827">Total: $${Number(invoice.total).toFixed(2)}</p>
+          </div>
+          ${invoice.notes ? `<p style="margin-top:16px;padding:12px;background:#fffbeb;border-radius:8px;font-size:13px;color:#92400e">${invoice.notes}</p>` : ''}
+          ${paymentMethodsHtml}
+        </div>`;
+
+      const transport = nodemailer.createTransport({
+        host: settings.smtp_host,
+        port: settings.smtp_port || 587,
+        secure: settings.smtp_secure ?? true,
+        auth: { user: settings.smtp_user, pass: settings.smtp_pass },
+      });
+
+      await transport.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to,
+        subject: `Invoice #${invoice.invoice_number} from ${fromName}`,
+        html,
+      });
+
+      if (invoice.status === 'draft') {
+        await db('invoices').where('id', id).where('user_id', user.id).update({ status: 'sent' });
+      }
+
+      return true;
     },
   },
 };

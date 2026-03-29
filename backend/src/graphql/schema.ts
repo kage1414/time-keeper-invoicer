@@ -101,7 +101,6 @@ export const typeDefs = `#graphql
     unbilled_amount: Float!
     recent_invoices: [Invoice!]!
     outstanding_amount: Float!
-    available_credits: Float!
   }
 
   type UserSettings {
@@ -121,6 +120,13 @@ export const typeDefs = `#graphql
     paypal: String
     zelle: String
     default_due_days: Int
+    smtp_host: String
+    smtp_port: Int
+    smtp_user: String
+    smtp_pass: String
+    smtp_secure: Boolean
+    smtp_from_email: String
+    smtp_from_name: String
     updated_at: String!
   }
 
@@ -140,6 +146,13 @@ export const typeDefs = `#graphql
     paypal: String
     zelle: String
     default_due_days: Int
+    smtp_host: String
+    smtp_port: Int
+    smtp_user: String
+    smtp_pass: String
+    smtp_secure: Boolean
+    smtp_from_email: String
+    smtp_from_name: String
   }
 
   type User {
@@ -305,5 +318,6 @@ export const typeDefs = `#graphql
     createCredit(input: CreateCreditInput!): Credit!
     deleteCredit(id: Int!): Boolean!
     updateUserSettings(input: UpdateUserSettingsInput!): UserSettings!
+    sendInvoice(id: Int!, to: String!): Boolean!
   }
 `;

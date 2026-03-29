@@ -13,7 +13,6 @@ const DASHBOARD_QUERY = `
       unbilled_amount
       recent_invoices { id invoice_number client_name total status }
       outstanding_amount
-      available_credits
     }
   }
 `;
@@ -49,7 +48,6 @@ export default function DashboardPage() {
         <StatCard label="Unbilled Hours" value={data.unbilled_hours} />
         <StatCard label="Unbilled Amount" value={`$${data.unbilled_amount.toFixed(2)}`} />
         <StatCard label="Outstanding" value={`$${data.outstanding_amount.toFixed(2)}`} />
-        <StatCard label="Available Credits" value={`$${data.available_credits.toFixed(2)}`} />
         <StatCard label="Running Timers" value={data.running_timers.length} />
       </div>
 
