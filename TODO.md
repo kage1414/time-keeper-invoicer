@@ -4,9 +4,10 @@
 
 ## 🧠 Backlog
 
-- [ ] Allow me to credit time that has previously been billed
-
 ## ✅ Done
+
+- [x] Allow me to credit time that has previously been billed
+- [x] Remove credits applied in bottom of invoice - credits are now negative line items
 
 - [x] Project setup
 - [x] Fix favicon - uses favicon.png in public folder with proper sizing
