@@ -4,13 +4,17 @@
 
 ## 🧠 Backlog
 
-- Don't show the restart option if an entry has an end time
-- Don't allow me to manually set an end time that is before the start time
-- Add a test button for smtp settings
-- The Send Email option should only be available if the user has configured smtp settings
-
 ## ✅ Done
 
+- [x] Setup to be sent to dockerhub (GitHub Actions workflow + docker-compose.hub.yml)
+
+- [x] Allow not billed items to be credited without requiring an invoice
+- [x] Run yarn install when starting docker container
+
+- [x] Attach PDF to invoice emails (checkbox in send modal, generates PDF via html2pdf.js)
+- [x] Don't show restart option if entry has end time
+- [x] Don't allow end time before start time
+- [x] SMTP: test connection button in settings, hide Send Email if SMTP not configured
 - [x] Import time entries from Excel with column mapping, preview, and invoice linkage
 - [x] Allow me to credit time that has previously been billed
 - [x] Remove credits applied in bottom of invoice - credits are now negative line items

@@ -119,6 +119,18 @@ export default function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const testSmtp = useMutation({
+    mutationFn: async () => {
+      await save.mutateAsync();
+      return gql(
+        `mutation($host: String!, $port: Int!, $user: String!, $pass: String!, $secure: Boolean!) { testSmtp(host: $host, port: $port, user: $user, pass: $pass, secure: $secure) }`,
+        { host: smtpHost, port: Number(smtpPort) || 587, user: smtpUser, pass: smtpPass, secure: smtpSecure }
+      );
+    },
+    onSuccess: () => toast.success('SMTP connection successful!'),
+    onError: (e: Error) => toast.error(`SMTP test failed: ${e.message}`),
+  });
+
   const changePassword = useMutation({
     mutationFn: () =>
       gql('mutation($currentPassword: String!, $newPassword: String!) { changePassword(currentPassword: $currentPassword, newPassword: $newPassword) }',
@@ -283,6 +295,11 @@ export default function SettingsPage() {
               <label htmlFor="smtpSecure" className="text-sm text-gray-700">Use SSL/TLS (port 465). Uncheck for STARTTLS (port 587).</label>
             </div>
           </div>
+          <button type="button" onClick={() => testSmtp.mutate()}
+            disabled={testSmtp.isPending}
+            className="mt-4 bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 disabled:opacity-50">
+            {testSmtp.isPending ? 'Testing...' : 'Test Connection'}
+          </button>
         </div>
 
         <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700">

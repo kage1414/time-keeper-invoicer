@@ -116,7 +116,6 @@ export default function TimeEntriesPage() {
     useState<StartModalState>(emptyStartModal);
   const [editModal, setEditModal] = useState<EditModalState>(emptyEditModal);
   const [addModal, setAddModal] = useState<AddModalState>(emptyAddModal);
-  const [restartedId, setRestartedId] = useState<number | null>(null);
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["projects"],
@@ -157,7 +156,6 @@ export default function TimeEntriesPage() {
       qc.invalidateQueries({ queryKey: ["timeEntries"] });
       toast.success("Timer started");
       setStartModal(emptyStartModal);
-      setRestartedId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -221,7 +219,6 @@ export default function TimeEntriesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timeEntries"] });
       toast.success("Timer stopped");
-      setRestartedId(null);
     },
   });
 
@@ -265,8 +262,7 @@ export default function TimeEntriesPage() {
       duration: string;
     }) =>
       gql(`mutation($id: Int!) { restartTimeEntry(id: $id) { id } }`, { id }),
-    onSuccess: (_data, { id, name, desc, duration }) => {
-      setRestartedId(id);
+    onSuccess: (_data, { name, desc, duration }) => {
       qc.invalidateQueries({ queryKey: ["timeEntries"] });
       toast.success(
         `Restarted: ${name}${desc ? ` - ${desc}` : ""} (was ${duration})`,
@@ -302,16 +298,6 @@ export default function TimeEntriesPage() {
   const running = entries.filter((e) => !e.end_time);
   const completed = entries.filter((e) => e.end_time);
   const hasRunning = running.length > 0;
-
-  const now = Date.now();
-  const oneHourAgo = now - 60 * 60 * 1000;
-  const mostRecentCompleted = completed.length > 0 ? completed[0] : null;
-  const restartableId =
-    !hasRunning &&
-    mostRecentCompleted?.end_time &&
-    new Date(mostRecentCompleted.end_time).getTime() > oneHourAgo
-      ? mostRecentCompleted.id
-      : null;
 
   return (
     <div>
@@ -362,11 +348,6 @@ export default function TimeEntriesPage() {
                 <span className="font-medium">{e.project_name}</span>
                 {e.description && (
                   <span className="text-gray-600 ml-2">- {e.description}</span>
-                )}
-                {restartedId === e.id && (
-                  <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                    Restarted
-                  </span>
                 )}
                 <span className="text-sm text-gray-500 ml-2">
                   Started: {formatTime(e.start_time)}
@@ -468,53 +449,38 @@ export default function TimeEntriesPage() {
                       </span>
                     </td>
                     <td className="p-3 text-right space-x-2">
-                      {restartableId === e.id && (
-                        <button
-                          onClick={() =>
-                            restartEntry.mutate({
-                              id: e.id,
-                              name: e.project_name,
-                              desc: e.description,
-                              duration: formatDuration(e.duration_minutes),
-                            })
-                          }
-                          className="text-green-600 hover:underline text-sm"
-                        >
-                          Restart
-                        </button>
-                      )}
                       <button
                         onClick={() => openEditModal(e)}
                         className="text-indigo-600 hover:underline text-sm"
                       >
                         Edit
                       </button>
+                      {e.duration_minutes && (
+                        <button
+                          onClick={() =>
+                            setConfirmAction({
+                              message: `Create a $${amount.toFixed(2)} credit for this entry?`,
+                              onConfirm: () => creditEntry.mutate(e.id),
+                            })
+                          }
+                          className="text-green-600 hover:underline text-sm"
+                        >
+                          Credit
+                        </button>
+                      )}
                       {e.invoice_id && (
-                        <>
-                          <button
-                            onClick={() =>
-                              setConfirmAction({
-                                message: `Create a $${amount.toFixed(2)} credit for this entry?`,
-                                onConfirm: () => creditEntry.mutate(e.id),
-                              })
-                            }
-                            className="text-green-600 hover:underline text-sm"
-                          >
-                            Credit
-                          </button>
-                          <button
-                            onClick={() =>
-                              setConfirmAction({
-                                message:
-                                  "Unbill this entry? It will be removed from its invoice.",
-                                onConfirm: () => unbillEntry.mutate(e.id),
-                              })
-                            }
-                            className="text-indigo-600 hover:underline text-sm"
-                          >
-                            Unbill
-                          </button>
-                        </>
+                        <button
+                          onClick={() =>
+                            setConfirmAction({
+                              message:
+                                "Unbill this entry? It will be removed from its invoice.",
+                              onConfirm: () => unbillEntry.mutate(e.id),
+                            })
+                          }
+                          className="text-indigo-600 hover:underline text-sm"
+                        >
+                          Unbill
+                        </button>
                       )}
                       {!e.invoice_id && (
                         <button
@@ -681,6 +647,10 @@ export default function TimeEntriesPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (editModal.endTime && new Date(editModal.endTime) <= new Date(editModal.startTime)) {
+                  toast.error('End time must be after start time');
+                  return;
+                }
                 updateEntry.mutate();
               }}
               className="space-y-4"
@@ -800,6 +770,10 @@ export default function TimeEntriesPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (new Date(addModal.endTime) <= new Date(addModal.startTime)) {
+                  toast.error('End time must be after start time');
+                  return;
+                }
                 addEntry.mutate();
               }}
               className="space-y-4"

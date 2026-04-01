@@ -18,7 +18,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(npx vite:*)",
-      "Bash(node -e \"const XLSX = require\\(''xlsx''\\); console.log\\(''ok'', typeof XLSX.read\\)\")"
+      "Bash(node -e \"const XLSX = require\\(''xlsx''\\); console.log\\(''ok'', typeof XLSX.read\\)\")",
+      "Bash(docker compose:*)"
     ]
   }
 }

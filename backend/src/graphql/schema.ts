@@ -328,7 +328,8 @@ export const typeDefs = `#graphql
     createCredit(input: CreateCreditInput!): Credit!
     deleteCredit(id: Int!): Boolean!
     updateUserSettings(input: UpdateUserSettingsInput!): UserSettings!
-    sendInvoice(id: Int!, to: String!): Boolean!
+    sendInvoice(id: Int!, to: String!, body: String, pdfBase64: String): Boolean!
     importTimeEntries(entries: [ImportTimeEntryInput!]!): Int!
+    testSmtp(host: String!, port: Int!, user: String!, pass: String!, secure: Boolean!): Boolean!
   }
 `;

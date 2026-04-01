@@ -460,7 +460,6 @@ export const resolvers = {
         .where('time_entries.user_id', user.id)
         .first();
       if (!entry) throw new Error('Time entry not found');
-      if (!entry.invoice_id) throw new Error('Time entry is not billed');
       const rate = entry.rate_override ?? entry.default_rate;
       const hours = (entry.duration_minutes || 0) / 60;
       const amount = parseFloat((hours * Number(rate)).toFixed(2));
@@ -471,7 +470,7 @@ export const resolvers = {
           amount,
           remaining_amount: amount,
           description: `Credit for: ${entry.project_name} - ${entry.description || 'Time entry'}`,
-          source_invoice_id: entry.invoice_id,
+          ...(entry.invoice_id ? { source_invoice_id: entry.invoice_id } : {}),
         })
         .returning('*');
       return credit;
@@ -630,7 +629,7 @@ export const resolvers = {
       }
     },
 
-    sendInvoice: async (_: any, { id, to }: { id: number; to: string }, context: Context) => {
+    sendInvoice: async (_: any, { id, to, body, pdfBase64 }: { id: number; to: string; body?: string; pdfBase64?: string }, context: Context) => {
       const user = requireAuth(context);
       const settings = await db('user_settings').where('user_id', user.id).first();
       if (!settings?.smtp_host || !settings?.smtp_user || !settings?.smtp_pass) {
@@ -685,8 +684,13 @@ export const resolvers = {
           </div>`;
       }
 
+      const bodyHtml = body
+        ? `<div style="margin-bottom:24px;font-size:14px;color:#374151;white-space:pre-wrap">${body.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}</div>`
+        : '';
+
       const html = `
         <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#111827">
+          ${bodyHtml}
           <h1 style="color:#4f46e5;font-size:24px">Invoice #${invoice.invoice_number}</h1>
           <p style="color:#6b7280">To: <strong>${invoice.client_name}</strong>${invoice.client_company ? ` (${invoice.client_company})` : ''}</p>
           <p style="color:#6b7280">Issue Date: ${issueDate} &nbsp;|&nbsp; Due: ${dueDate}</p>
@@ -718,12 +722,22 @@ export const resolvers = {
         auth: { user: settings.smtp_user, pass: settings.smtp_pass },
       });
 
-      await transport.sendMail({
+      const mailOptions: any = {
         from: `"${fromName}" <${fromEmail}>`,
         to,
         subject: `Invoice #${invoice.invoice_number} from ${fromName}`,
         html,
-      });
+      };
+
+      if (pdfBase64) {
+        mailOptions.attachments = [{
+          filename: `Invoice-${invoice.invoice_number}.pdf`,
+          content: Buffer.from(pdfBase64, 'base64'),
+          contentType: 'application/pdf',
+        }];
+      }
+
+      await transport.sendMail(mailOptions);
 
       if (invoice.status === 'draft') {
         await db('invoices').where('id', id).where('user_id', user.id).update({ status: 'sent' });
@@ -764,6 +778,18 @@ export const resolvers = {
         imported++;
       }
       return imported;
+    },
+
+    testSmtp: async (_: any, { host, port, user: smtpUser, pass, secure }: { host: string; port: number; user: string; pass: string; secure: boolean }, context: Context) => {
+      requireAuth(context);
+      const transport = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user: smtpUser, pass },
+      });
+      await transport.verify();
+      return true;
     },
   },
 };
