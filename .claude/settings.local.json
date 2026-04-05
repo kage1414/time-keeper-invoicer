@@ -33,7 +33,9 @@
       "Bash(2>&1)",
       "Bash(docker stop:*)",
       "Bash(docker rm:*)",
-      "Bash(yarn remove:*)"
+      "Bash(yarn remove:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rebase:*)"
     ]
   }
 }
