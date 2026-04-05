@@ -65,6 +65,7 @@ export interface Invoice {
   credits_applied: number;
   total: number;
   notes: string;
+  payment_method?: string | null;
   line_items?: LineItem[];
   credits?: Credit[];
   created_at: string;

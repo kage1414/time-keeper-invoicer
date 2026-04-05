@@ -571,11 +571,13 @@ export const resolvers = {
       return updated;
     },
 
-    updateInvoiceStatus: async (_: any, { id, status }: { id: number; status: string }, context: Context) => {
+    updateInvoiceStatus: async (_: any, { id, status, payment_method }: { id: number; status: string; payment_method?: string }, context: Context) => {
       const user = requireAuth(context);
+      const updateData: Record<string, any> = { status, updated_at: db.fn.now() };
+      if (payment_method !== undefined) updateData.payment_method = payment_method;
       const [invoice] = await db('invoices')
         .where({ id, user_id: user.id })
-        .update({ status, updated_at: db.fn.now() })
+        .update(updateData)
         .returning('*');
       if (!invoice) throw new Error('Invoice not found');
       return invoice;

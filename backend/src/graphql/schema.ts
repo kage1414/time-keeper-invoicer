@@ -88,6 +88,7 @@ export const typeDefs = `#graphql
     credits_applied: Float!
     total: Float!
     notes: String
+    payment_method: String
     line_items: [LineItem!]
     credits: [Credit!]
     created_at: String!
@@ -327,7 +328,7 @@ export const typeDefs = `#graphql
     unbillTimeEntry(id: Int!): TimeEntry!
     creditTimeEntry(id: Int!): Credit!
     createInvoice(input: CreateInvoiceInput!): Invoice!
-    updateInvoiceStatus(id: Int!, status: String!): Invoice!
+    updateInvoiceStatus(id: Int!, status: String!, payment_method: String): Invoice!
     deleteInvoice(id: Int!): Boolean!
     createCredit(input: CreateCreditInput!): Credit!
     deleteCredit(id: Int!): Boolean!
