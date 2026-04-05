@@ -78,7 +78,7 @@ export const resolvers = {
       const user = requireAuth(context);
       let query = db('projects')
         .join('clients', 'projects.client_id', 'clients.id')
-        .select('projects.*', 'clients.name as client_name')
+        .select('projects.*', db.raw('COALESCE(clients.name, clients.company) as client_name'))
         .where('projects.user_id', user.id);
       if (client_id) query = query.where('projects.client_id', client_id);
       if (is_active !== undefined) query = query.where('projects.is_active', is_active);
@@ -89,7 +89,7 @@ export const resolvers = {
       const user = requireAuth(context);
       return db('projects')
         .join('clients', 'projects.client_id', 'clients.id')
-        .select('projects.*', 'clients.name as client_name')
+        .select('projects.*', db.raw('COALESCE(clients.name, clients.company) as client_name'))
         .where('projects.id', id)
         .where('projects.user_id', user.id)
         .first();
@@ -104,7 +104,7 @@ export const resolvers = {
           'time_entries.*',
           'projects.name as project_name',
           'projects.default_rate',
-          'clients.name as client_name',
+          db.raw('COALESCE(clients.name, clients.company) as client_name'),
           'clients.id as client_id'
         )
         .where('time_entries.user_id', user.id);
@@ -129,7 +129,7 @@ export const resolvers = {
       const user = requireAuth(context);
       let query = db('invoices')
         .join('clients', 'invoices.client_id', 'clients.id')
-        .select('invoices.*', 'clients.name as client_name')
+        .select('invoices.*', db.raw('COALESCE(clients.name, clients.company) as client_name'))
         .where('invoices.user_id', user.id);
       if (client_id) query = query.where('invoices.client_id', client_id);
       if (status) query = query.where('invoices.status', status);
@@ -140,7 +140,7 @@ export const resolvers = {
       const user = requireAuth(context);
       const invoice = await db('invoices')
         .join('clients', 'invoices.client_id', 'clients.id')
-        .select('invoices.*', 'clients.name as client_name', 'clients.company as client_company', 'clients.email as client_email', 'clients.address1 as client_address1', 'clients.address2 as client_address2', 'clients.city as client_city', 'clients.state as client_state', 'clients.zip as client_zip')
+        .select('invoices.*', db.raw('COALESCE(clients.name, clients.company) as client_name'), 'clients.company as client_company', 'clients.email as client_email', 'clients.address1 as client_address1', 'clients.address2 as client_address2', 'clients.city as client_city', 'clients.state as client_state', 'clients.zip as client_zip')
         .where('invoices.id', id)
         .where('invoices.user_id', user.id)
         .first();
@@ -148,7 +148,7 @@ export const resolvers = {
       const line_items = await db('invoice_line_items').where('invoice_id', id).orderBy('id');
       const credits = await db('credits')
         .join('clients', 'credits.client_id', 'clients.id')
-        .select('credits.*', 'clients.name as client_name')
+        .select('credits.*', db.raw('COALESCE(clients.name, clients.company) as client_name'))
         .where('applied_invoice_id', id);
       return { ...invoice, line_items, credits };
     },
@@ -157,7 +157,7 @@ export const resolvers = {
       const user = requireAuth(context);
       let query = db('credits')
         .join('clients', 'credits.client_id', 'clients.id')
-        .select('credits.*', 'clients.name as client_name')
+        .select('credits.*', db.raw('COALESCE(clients.name, clients.company) as client_name'))
         .where('credits.user_id', user.id);
       if (client_id) query = query.where('credits.client_id', client_id);
       if (available) query = query.where('credits.remaining_amount', '>', 0);
@@ -201,7 +201,7 @@ export const resolvers = {
       const recentInvoices = await db('invoices')
         .where('invoices.user_id', user.id)
         .join('clients', 'invoices.client_id', 'clients.id')
-        .select('invoices.*', 'clients.name as client_name')
+        .select('invoices.*', db.raw('COALESCE(clients.name, clients.company) as client_name'))
         .orderBy('invoices.created_at', 'desc')
         .limit(5);
       const outstandingAmount = await db('invoices')
@@ -309,6 +309,7 @@ export const resolvers = {
 
     createClient: async (_: any, { input }: any, context: Context) => {
       const user = requireAuth(context);
+      if (!input.name && !input.company) throw new Error('A client must have at least a name or company');
       const [client] = await db('clients').insert({ ...input, user_id: user.id }).returning('*');
       return client;
     },
@@ -640,7 +641,7 @@ export const resolvers = {
 
       const invoice = await db('invoices')
         .join('clients', 'invoices.client_id', 'clients.id')
-        .select('invoices.*', 'clients.name as client_name', 'clients.company as client_company')
+        .select('invoices.*', db.raw('COALESCE(clients.name, clients.company) as client_name'), 'clients.company as client_company')
         .where('invoices.id', id)
         .where('invoices.user_id', user.id)
         .first();

@@ -1,7 +1,7 @@
 export const typeDefs = `#graphql
   type Client {
     id: Int!
-    name: String!
+    name: String
     company: String
     email: String
     address1: String
@@ -219,7 +219,7 @@ export const typeDefs = `#graphql
   }
 
   input CreateClientInput {
-    name: String!
+    name: String
     company: String
     email: String
     address1: String

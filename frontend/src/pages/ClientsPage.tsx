@@ -10,11 +10,12 @@ const CLIENTS_QUERY = `query { clients { id name company email address1 address2
 function EditClientModal({ client, onClose }: { client: Partial<Client>; onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<Partial<Client>>({ is_active: true, ...client });
+  const [validationError, setValidationError] = useState('');
 
   const save = useMutation({
     mutationFn: (c: Partial<Client>) => {
       const input = {
-        name: c.name,
+        name: c.name || null,
         company: c.company || null,
         email: c.email || null,
         address1: c.address1 || null,
@@ -62,12 +63,12 @@ function EditClientModal({ client, onClose }: { client: Partial<Client>; onClose
         </div>
         <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-gray-400 font-normal">(or company required)</span></label>
             <input className="border rounded p-2 w-full" value={form.name || ''}
               onChange={(e) => set('name', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Company <span className="text-gray-400 font-normal">(or name required)</span></label>
             <input className="border rounded p-2 w-full" value={form.company || ''}
               onChange={(e) => set('company', e.target.value)} />
           </div>
@@ -107,10 +108,20 @@ function EditClientModal({ client, onClose }: { client: Partial<Client>; onClose
               onChange={(e) => set('zip', e.target.value)} />
           </div>
         </div>
+        {validationError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mx-6">{validationError}</p>
+        )}
         <div className="flex gap-2 px-6 py-4 border-t justify-end">
           <button onClick={onClose} className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
           <button
-            onClick={() => save.mutate(form)}
+            onClick={() => {
+              if (!form.name && !form.company) {
+                setValidationError('A name or company is required.');
+                return;
+              }
+              setValidationError('');
+              save.mutate(form);
+            }}
             disabled={save.isPending}
             className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
           >
@@ -179,7 +190,7 @@ export default function ClientsPage() {
           <tbody>
             {visibleClients.map((c) => (
               <tr key={c.id} className={`border-t hover:bg-gray-50 ${c.is_active === false ? 'opacity-50' : ''}`}>
-                <td className="px-4 py-3 font-medium">{c.name}</td>
+                <td className="px-4 py-3 font-medium">{c.name || c.company}</td>
                 <td className="px-4 py-3">{c.email}</td>
                 <td className="px-4 py-3">{c.phone}</td>
                 <td className="px-4 py-3">

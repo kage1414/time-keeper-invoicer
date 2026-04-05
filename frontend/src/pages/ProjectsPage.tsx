@@ -6,7 +6,7 @@ import { Project, Client } from "../types";
 import ConfirmModal from "../components/ConfirmModal";
 
 const PROJECTS_QUERY = `query { projects { id client_id client_name name description default_rate is_active created_at updated_at } }`;
-const CLIENTS_QUERY = `query { clients { id name } }`;
+const CLIENTS_QUERY = `query { clients { id name company } }`;
 
 interface ProjectForm {
   client_id: string;
@@ -110,7 +110,7 @@ function EditProjectModal({
             >
               <option value="">Select Client</option>
               {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>{c.name || c.company}</option>
               ))}
             </select>
           </div>
