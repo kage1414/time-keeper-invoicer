@@ -34,12 +34,13 @@ export interface TimeEntry {
   client_id: number;
   default_rate: number;
   description: string;
-  start_time: string;
+  start_time: string | null;
   end_time: string | null;
   duration_minutes: number;
   is_billable: boolean;
   invoice_id: number | null;
   rate_override: number | null;
+  flat_amount: number | null;
   created_at: string;
   updated_at: string;
 }

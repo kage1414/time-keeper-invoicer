@@ -35,12 +35,13 @@ export const typeDefs = `#graphql
     client_id: Int
     default_rate: Float
     description: String
-    start_time: String!
+    start_time: String
     end_time: String
     duration_minutes: Float
     is_billable: Boolean!
     invoice_id: Int
     rate_override: Float
+    flat_amount: Float
     created_at: String!
     updated_at: String!
   }
@@ -266,6 +267,7 @@ export const typeDefs = `#graphql
     duration_minutes: Float
     is_billable: Boolean
     rate_override: Float
+    flat_amount: Float
   }
 
   input UpdateTimeEntryInput {
@@ -276,6 +278,7 @@ export const typeDefs = `#graphql
     duration_minutes: Float
     is_billable: Boolean
     rate_override: Float
+    flat_amount: Float
   }
 
   input ImportTimeEntryInput {

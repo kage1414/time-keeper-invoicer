@@ -461,9 +461,14 @@ export const resolvers = {
         .where('time_entries.user_id', user.id)
         .first();
       if (!entry) throw new Error('Time entry not found');
-      const rate = entry.rate_override ?? entry.default_rate;
-      const hours = (entry.duration_minutes || 0) / 60;
-      const amount = parseFloat((hours * Number(rate)).toFixed(2));
+      let amount: number;
+      if (entry.flat_amount != null) {
+        amount = parseFloat(Number(entry.flat_amount).toFixed(2));
+      } else {
+        const rate = entry.rate_override ?? entry.default_rate;
+        const hours = (entry.duration_minutes || 0) / 60;
+        amount = parseFloat((hours * Number(rate)).toFixed(2));
+      }
       const [credit] = await db('credits')
         .insert({
           client_id: entry.client_id,
@@ -517,14 +522,26 @@ export const resolvers = {
           .whereIn('time_entries.id', time_entry_ids)
           .where('time_entries.user_id', user.id);
         for (const entry of entries) {
-          const rate = entry.rate_override ?? entry.default_rate;
-          const hours = (entry.duration_minutes || 0) / 60;
-          const amount = hours * rate;
-          const entryDate = new Date(entry.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const entryDate = entry.start_time
+            ? new Date(entry.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : null;
+          const descSuffix = entry.description ? '\n' + entry.description : '';
+          const descPrefix = entryDate ? `${entry.project_name} - ${entryDate}` : entry.project_name;
+          let quantity: number, rate: number, amount: number;
+          if (entry.flat_amount != null) {
+            quantity = 1;
+            rate = parseFloat(Number(entry.flat_amount).toFixed(2));
+            amount = rate;
+          } else {
+            rate = entry.rate_override ?? entry.default_rate;
+            const hours = (entry.duration_minutes || 0) / 60;
+            quantity = parseFloat(hours.toFixed(2));
+            amount = hours * rate;
+          }
           await db('invoice_line_items').insert({
             invoice_id: invoice.id,
-            description: `${entry.project_name} - ${entryDate}${entry.description ? '\n' + entry.description : ''}`,
-            quantity: parseFloat(hours.toFixed(2)),
+            description: `${descPrefix}${descSuffix}`,
+            quantity,
             rate,
             amount: parseFloat(amount.toFixed(2)),
             time_entry_id: entry.id,
@@ -541,15 +558,25 @@ export const resolvers = {
           .whereIn('time_entries.id', credit_time_entry_ids)
           .where('time_entries.user_id', user.id);
         for (const entry of creditEntries) {
-          const rate = entry.rate_override ?? entry.default_rate;
-          const hours = (entry.duration_minutes || 0) / 60;
-          const amount = parseFloat((hours * rate).toFixed(2));
-          const entryDate = new Date(entry.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          let amount: number;
+          if (entry.flat_amount != null) {
+            amount = parseFloat(Number(entry.flat_amount).toFixed(2));
+          } else {
+            const rate = entry.rate_override ?? entry.default_rate;
+            const hours = (entry.duration_minutes || 0) / 60;
+            amount = parseFloat((hours * rate).toFixed(2));
+          }
+          const entryDate = entry.start_time
+            ? new Date(entry.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : null;
+          const creditDescPrefix = entryDate ? `Credit: ${entry.project_name} - ${entryDate}` : `Credit: ${entry.project_name}`;
+          const creditRate = entry.flat_amount != null ? amount : (entry.rate_override ?? entry.default_rate);
+          const creditQty = entry.flat_amount != null ? 1 : parseFloat(((entry.duration_minutes || 0) / 60).toFixed(2));
           await db('invoice_line_items').insert({
             invoice_id: invoice.id,
-            description: `Credit: ${entry.project_name} - ${entryDate}${entry.description ? '\n' + entry.description : ''}`,
-            quantity: parseFloat(hours.toFixed(2)),
-            rate: -Number(rate),
+            description: `${creditDescPrefix}${entry.description ? '\n' + entry.description : ''}`,
+            quantity: creditQty,
+            rate: -Number(creditRate),
             amount: parseFloat((-amount).toFixed(2)),
             time_entry_id: entry.id,
           });
