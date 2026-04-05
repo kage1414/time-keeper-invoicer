@@ -1,7 +1,7 @@
 export const typeDefs = `#graphql
   type Client {
     id: Int!
-    name: String!
+    name: String
     company: String
     email: String
     address1: String
@@ -10,6 +10,7 @@ export const typeDefs = `#graphql
     state: String
     zip: String
     phone: String
+    is_active: Boolean!
     created_at: String!
     updated_at: String!
   }
@@ -34,12 +35,13 @@ export const typeDefs = `#graphql
     client_id: Int
     default_rate: Float
     description: String
-    start_time: String!
+    start_time: String
     end_time: String
     duration_minutes: Float
     is_billable: Boolean!
     invoice_id: Int
     rate_override: Float
+    flat_amount: Float
     created_at: String!
     updated_at: String!
   }
@@ -87,6 +89,7 @@ export const typeDefs = `#graphql
     credits_applied: Float!
     total: Float!
     notes: String
+    payment_method: String
     line_items: [LineItem!]
     credits: [Credit!]
     created_at: String!
@@ -217,7 +220,7 @@ export const typeDefs = `#graphql
   }
 
   input CreateClientInput {
-    name: String!
+    name: String
     company: String
     email: String
     address1: String
@@ -238,6 +241,7 @@ export const typeDefs = `#graphql
     state: String
     zip: String
     phone: String
+    is_active: Boolean
   }
 
   input CreateProjectInput {
@@ -263,6 +267,7 @@ export const typeDefs = `#graphql
     duration_minutes: Float
     is_billable: Boolean
     rate_override: Float
+    flat_amount: Float
   }
 
   input UpdateTimeEntryInput {
@@ -273,6 +278,7 @@ export const typeDefs = `#graphql
     duration_minutes: Float
     is_billable: Boolean
     rate_override: Float
+    flat_amount: Float
   }
 
   input ImportTimeEntryInput {
@@ -325,7 +331,7 @@ export const typeDefs = `#graphql
     unbillTimeEntry(id: Int!): TimeEntry!
     creditTimeEntry(id: Int!): Credit!
     createInvoice(input: CreateInvoiceInput!): Invoice!
-    updateInvoiceStatus(id: Int!, status: String!): Invoice!
+    updateInvoiceStatus(id: Int!, status: String!, payment_method: String): Invoice!
     deleteInvoice(id: Int!): Boolean!
     createCredit(input: CreateCreditInput!): Credit!
     deleteCredit(id: Int!): Boolean!

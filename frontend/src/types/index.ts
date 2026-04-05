@@ -1,6 +1,6 @@
 export interface Client {
   id: number;
-  name: string;
+  name: string | null;
   company: string;
   email: string;
   address1: string;
@@ -9,6 +9,7 @@ export interface Client {
   state: string;
   zip: string;
   phone: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -33,12 +34,13 @@ export interface TimeEntry {
   client_id: number;
   default_rate: number;
   description: string;
-  start_time: string;
+  start_time: string | null;
   end_time: string | null;
   duration_minutes: number;
   is_billable: boolean;
   invoice_id: number | null;
   rate_override: number | null;
+  flat_amount: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +66,7 @@ export interface Invoice {
   credits_applied: number;
   total: number;
   notes: string;
+  payment_method?: string | null;
   line_items?: LineItem[];
   credits?: Credit[];
   created_at: string;

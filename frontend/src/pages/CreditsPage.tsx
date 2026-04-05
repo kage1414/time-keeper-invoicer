@@ -14,7 +14,7 @@ const CREDITS_QUERY = `
   }
 `;
 
-const CLIENTS_QUERY = `query { clients { id name } }`;
+const CLIENTS_QUERY = `query { clients { id name company } }`;
 
 export default function CreditsPage() {
   const qc = useQueryClient();
@@ -82,7 +82,7 @@ export default function CreditsPage() {
         >
           <select className="border rounded p-2" required value={clientId} onChange={(e) => setClientId(e.target.value)}>
             <option value="">Select Client *</option>
-            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.name || c.company}</option>)}
           </select>
           <input className="border rounded p-2" placeholder="Amount *" type="number" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} />
           <input className="border rounded p-2" placeholder="Description *" required value={description} onChange={(e) => setDescription(e.target.value)} />

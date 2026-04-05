@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
 import { useAuth } from '../auth/AuthContext';
 
 export default function LoginPage() {
@@ -8,14 +7,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
       await login(email, password);
     } catch (err: any) {
-      toast.error(err.message);
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -40,6 +41,9 @@ export default function LoginPage() {
             <input type="password" required className="border rounded p-2 w-full" value={password}
               onChange={(e) => setPassword(e.target.value)} />
           </div>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>
+          )}
           <button type="submit" disabled={loading}
             className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
             {loading ? 'Signing in...' : 'Sign In'}

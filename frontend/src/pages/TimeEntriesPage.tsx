@@ -37,7 +37,7 @@ const TIME_ENTRIES_QUERY = `
     timeEntries(project_id: $project_id, unbilled: $unbilled) {
       id project_id project_name client_name client_id default_rate
       description start_time end_time duration_minutes is_billable
-      invoice_id rate_override created_at updated_at
+      invoice_id rate_override flat_amount created_at updated_at
     }
   }
 `;
@@ -88,9 +88,11 @@ interface AddModalState {
   open: boolean;
   projectId: string;
   description: string;
-  rateOverride: string;
+  isTimeBased: boolean;
   startTime: string;
   endTime: string;
+  rateOverride: string;
+  flatAmount: string;
   isBillable: boolean;
 }
 
@@ -98,9 +100,11 @@ const emptyAddModal: AddModalState = {
   open: false,
   projectId: "",
   description: "",
-  rateOverride: "",
+  isTimeBased: true,
   startTime: "",
   endTime: "",
+  rateOverride: "",
+  flatAmount: "",
   isBillable: true,
 };
 
@@ -168,12 +172,11 @@ export default function TimeEntriesPage() {
           input: {
             project_id: Number(addModal.projectId),
             description: addModal.description || null,
-            start_time: new Date(addModal.startTime).toISOString(),
-            end_time: new Date(addModal.endTime).toISOString(),
+            start_time: addModal.isTimeBased && addModal.startTime ? new Date(addModal.startTime).toISOString() : null,
+            end_time: addModal.isTimeBased && addModal.endTime ? new Date(addModal.endTime).toISOString() : null,
             is_billable: addModal.isBillable,
-            rate_override: addModal.rateOverride
-              ? Number(addModal.rateOverride)
-              : null,
+            rate_override: addModal.isTimeBased && addModal.rateOverride ? Number(addModal.rateOverride) : null,
+            flat_amount: !addModal.isTimeBased && addModal.flatAmount ? Number(addModal.flatAmount) : null,
           },
         },
       ),
@@ -289,7 +292,7 @@ export default function TimeEntriesPage() {
       projectId: String(e.project_id),
       description: e.description || "",
       rateOverride: e.rate_override ? String(e.rate_override) : "",
-      startTime: toLocalDatetime(e.start_time),
+      startTime: e.start_time ? toLocalDatetime(e.start_time) : "",
       endTime: e.end_time ? toLocalDatetime(e.end_time) : "",
       isBillable: e.is_billable,
     });
@@ -325,7 +328,7 @@ export default function TimeEntriesPage() {
                 startTime: toLocalDatetime(new Date().toISOString()),
               })
             }
-            disabled={hasRunning}
+            disabled={hasRunning || addModal.open}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Start Timer
@@ -350,10 +353,10 @@ export default function TimeEntriesPage() {
                   <span className="text-gray-600 ml-2">- {e.description}</span>
                 )}
                 <span className="text-sm text-gray-500 ml-2">
-                  Started: {formatTime(e.start_time)}
+                  Started: {e.start_time ? formatTime(e.start_time) : "—"}
                 </span>
                 <span className="ml-3">
-                  <ElapsedTime startTime={e.start_time} />
+                  <ElapsedTime startTime={e.start_time ?? new Date().toISOString()} />
                 </span>
               </div>
               <div className="flex gap-2 items-center">
@@ -422,20 +425,21 @@ export default function TimeEntriesPage() {
             </thead>
             <tbody>
               {completed.map((e) => {
+                const isFlat = e.flat_amount != null;
                 const rate = e.rate_override ?? e.default_rate;
-                const amount = (e.duration_minutes / 60) * Number(rate);
+                const amount = isFlat ? Number(e.flat_amount) : (e.duration_minutes / 60) * Number(rate);
                 return (
                   <tr key={e.id} className="border-t hover:bg-gray-50">
                     <td className="p-3 font-medium">{e.project_name}</td>
                     <td className="p-3">{e.description || "-"}</td>
-                    <td className="p-3">{formatTime(e.start_time)}</td>
+                    <td className="p-3">{e.start_time ? formatTime(e.start_time) : "—"}</td>
                     <td className="p-3">
-                      {e.end_time ? formatTime(e.end_time) : "-"}
+                      {e.end_time ? formatTime(e.end_time) : "—"}
                     </td>
                     <td className="p-3">
-                      {formatDuration(e.duration_minutes)}
+                      {isFlat ? "—" : formatDuration(e.duration_minutes)}
                     </td>
-                    <td className="p-3">${Number(rate).toFixed(2)}/hr</td>
+                    <td className="p-3">{isFlat ? "—" : `$${Number(rate).toFixed(2)}/hr`}</td>
                     <td className="p-3">${amount.toFixed(2)}</td>
                     <td className="p-3">
                       <span
@@ -766,11 +770,12 @@ export default function TimeEntriesPage() {
             onClick={() => setAddModal(emptyAddModal)}
           />
           <div className="relative bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Add Time Entry</h3>
+            <h3 className="text-lg font-semibold mb-4">Add Entry</h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (new Date(addModal.endTime) <= new Date(addModal.startTime)) {
+                if (addModal.isTimeBased && addModal.startTime && addModal.endTime &&
+                    new Date(addModal.endTime) <= new Date(addModal.startTime)) {
                   toast.error('End time must be after start time');
                   return;
                 }
@@ -779,88 +784,86 @@ export default function TimeEntriesPage() {
               className="space-y-4"
             >
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Project *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project *</label>
                 <select
                   className="border rounded p-2 w-full"
                   required
                   value={addModal.projectId}
-                  onChange={(e) =>
-                    setAddModal({ ...addModal, projectId: e.target.value })
-                  }
+                  onChange={(e) => setAddModal({ ...addModal, projectId: e.target.value })}
                 >
                   <option value="">Select Project</option>
-                  {projects
-                    .filter((p) => p.is_active)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.client_name})
-                      </option>
-                    ))}
+                  {projects.filter((p) => p.is_active).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.client_name})</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
                   className="border rounded p-2 w-full"
                   value={addModal.description}
-                  onChange={(e) =>
-                    setAddModal({ ...addModal, description: e.target.value })
-                  }
+                  onChange={(e) => setAddModal({ ...addModal, description: e.target.value })}
                 />
               </div>
+              {/* Time-based toggle */}
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={addModal.isTimeBased}
+                  onChange={(e) => setAddModal({ ...addModal, isTimeBased: e.target.checked })}
+                />
+                Time-based entry
+              </label>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Time *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
                 <input
                   className="border rounded p-2 w-full"
                   type="datetime-local"
-                  required
                   value={addModal.startTime}
-                  onChange={(e) =>
-                    setAddModal({ ...addModal, startTime: e.target.value })
-                  }
+                  onChange={(e) => setAddModal({ ...addModal, startTime: e.target.value })}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Time *
-                </label>
-                <input
-                  className="border rounded p-2 w-full"
-                  type="datetime-local"
-                  required
-                  value={addModal.endTime}
-                  onChange={(e) =>
-                    setAddModal({ ...addModal, endTime: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Rate Override ($/hr)
-                </label>
-                <input
-                  className="border rounded p-2 w-full"
-                  type="number"
-                  step="0.01"
-                  value={addModal.rateOverride}
-                  onChange={(e) =>
-                    setAddModal({ ...addModal, rateOverride: e.target.value })
-                  }
-                />
-              </div>
+              {addModal.isTimeBased && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <input
+                    className="border rounded p-2 w-full"
+                    type="datetime-local"
+                    value={addModal.endTime}
+                    onChange={(e) => setAddModal({ ...addModal, endTime: e.target.value })}
+                  />
+                </div>
+              )}
+              {addModal.isTimeBased ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rate ($/hr)</label>
+                  <input
+                    className="border rounded p-2 w-full"
+                    type="number"
+                    step="0.01"
+                    placeholder="Leave blank to use project default"
+                    value={addModal.rateOverride}
+                    onChange={(e) => setAddModal({ ...addModal, rateOverride: e.target.value })}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($) *</label>
+                  <input
+                    className="border rounded p-2 w-full"
+                    type="number"
+                    step="0.01"
+                    required
+                    value={addModal.flatAmount}
+                    onChange={(e) => setAddModal({ ...addModal, flatAmount: e.target.value })}
+                  />
+                </div>
+              )}
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={addModal.isBillable}
-                  onChange={(e) =>
-                    setAddModal({ ...addModal, isBillable: e.target.checked })
-                  }
+                  onChange={(e) => setAddModal({ ...addModal, isBillable: e.target.checked })}
                 />
                 Billable
               </label>

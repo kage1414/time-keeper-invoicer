@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -12,7 +12,7 @@ const INVOICE_QUERY = `
   query($id: Int!) {
     invoice(id: $id) {
       id client_id client_name client_company client_email client_address1 client_address2 client_city client_state client_zip
-      invoice_number status issue_date due_date
+      invoice_number status payment_method issue_date due_date
       subtotal tax_rate tax_amount total notes
       line_items { id description quantity rate amount time_entry_id }
       created_at updated_at
@@ -36,12 +36,119 @@ const statusTransitions: Record<string, string[]> = {
   cancelled: ["draft"],
 };
 
+function SplitDropdown({
+  label,
+  buttonClass,
+  items,
+}: {
+  label: string;
+  buttonClass: string;
+  items: { label: string; onClick: () => void }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1 px-3 py-2 rounded text-sm ${buttonClass}`}
+      >
+        {label}
+        <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1 bg-white border rounded-md shadow-lg z-50 min-w-[140px] py-1">
+          {items.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => { item.onClick(); setOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaymentModal({
+  total,
+  settings,
+  onConfirm,
+  onClose,
+}: {
+  total: number;
+  settings: UserSettings | undefined;
+  onConfirm: (method: string) => void;
+  onClose: () => void;
+}) {
+  const methods = [
+    "Cash",
+    ...(settings?.venmo ? [`Venmo (${settings.venmo})`] : []),
+    ...(settings?.cashapp ? [`Cash App (${settings.cashapp})`] : []),
+    ...(settings?.paypal ? [`PayPal (${settings.paypal})`] : []),
+    ...(settings?.zelle ? [`Zelle (${settings.zelle})`] : []),
+    "Other",
+  ];
+  const [selected, setSelected] = useState(methods[0]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold">Mark as Paid</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Total: ${Number(total).toFixed(2)}</p>
+        </div>
+        <div className="px-6 py-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Payment received via</label>
+          <div className="flex flex-col gap-2">
+            {methods.map((m) => (
+              <label key={m} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="payment_method"
+                  value={m}
+                  checked={selected === m}
+                  onChange={() => setSelected(m)}
+                  className="accent-indigo-600"
+                />
+                <span className="text-sm">{m}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+          <button
+            onClick={() => onConfirm(selected)}
+            className="px-4 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-700"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [sendTo, setSendTo] = useState("");
   const [sendBody, setSendBody] = useState("");
   const [attachPdf, setAttachPdf] = useState(true);
@@ -60,10 +167,10 @@ export default function InvoiceDetailPage() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: (status: string) =>
+    mutationFn: ({ status, payment_method }: { status: string; payment_method?: string }) =>
       gql(
-        `mutation($id: Int!, $status: String!) { updateInvoiceStatus(id: $id, status: $status) { id } }`,
-        { id: Number(id), status },
+        `mutation($id: Int!, $status: String!, $payment_method: String) { updateInvoiceStatus(id: $id, status: $status, payment_method: $payment_method) { id } }`,
+        { id: Number(id), status, payment_method },
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoice", id] });
@@ -375,27 +482,30 @@ export default function InvoiceDetailPage() {
               Send Email
             </button>
           )}
-          <button
-            onClick={exportPdf}
-            className="bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700"
-          >
-            Export PDF
-          </button>
-          <button
-            onClick={exportCsv}
-            className="bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700"
-          >
-            Export CSV
-          </button>
-          {nextStatuses.map((s) => (
-            <button
-              key={s}
-              onClick={() => updateStatus.mutate(s)}
-              className="bg-indigo-600 text-white px-3 py-2 rounded text-sm hover:bg-indigo-700 capitalize"
-            >
-              Mark {s}
-            </button>
-          ))}
+          <SplitDropdown
+            label="Export"
+            buttonClass="bg-gray-600 text-white hover:bg-gray-700"
+            items={[
+              { label: "Export PDF", onClick: exportPdf },
+              { label: "Export CSV", onClick: exportCsv },
+            ]}
+          />
+          {nextStatuses.length > 0 && (
+            <SplitDropdown
+              label="Mark"
+              buttonClass="bg-indigo-600 text-white hover:bg-indigo-700"
+              items={nextStatuses.map((s) => ({
+                label: s.charAt(0).toUpperCase() + s.slice(1),
+                onClick: () => {
+                  if (s === "paid") {
+                    setShowPaymentModal(true);
+                  } else {
+                    updateStatus.mutate({ status: s });
+                  }
+                },
+              }))}
+            />
+          )}
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700"
@@ -417,6 +527,12 @@ export default function InvoiceDetailPage() {
                 {invoice.status}
               </span>
             </dd>
+            {invoice.payment_method && (
+              <>
+                <dt className="text-gray-500">Payment</dt>
+                <dd>{invoice.payment_method}</dd>
+              </>
+            )}
             <dt className="text-gray-500">Issue Date</dt>
             <dd>{new Date(invoice.issue_date).toLocaleDateString()}</dd>
             <dt className="text-gray-500">Due Date</dt>
@@ -580,6 +696,18 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
         )}
+
+      {showPaymentModal && invoice && (
+        <PaymentModal
+          total={invoice.total}
+          settings={settings}
+          onConfirm={(method) => {
+            updateStatus.mutate({ status: "paid", payment_method: method });
+            setShowPaymentModal(false);
+          }}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
 
       <ConfirmModal
         open={showDeleteConfirm}

@@ -7,7 +7,7 @@ import { Client, TimeEntry, UserSettings } from '../types';
 
 type EntryAction = 'bill' | 'credit';
 
-const CLIENTS_QUERY = `query { clients { id name } }`;
+const CLIENTS_QUERY = `query { clients { id name company } }`;
 const SETTINGS_QUERY = `query { userSettings { default_due_days } }`;
 
 const UNBILLED_ENTRIES_QUERY = `
@@ -180,7 +180,7 @@ export default function CreateInvoicePage() {
             <select className="border rounded p-2 w-full" value={clientId}
               onChange={(e) => { setClientId(e.target.value); resetSelections(); }}>
               <option value="">Select Client</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name || c.company}</option>)}
             </select>
           </div>
           <div>

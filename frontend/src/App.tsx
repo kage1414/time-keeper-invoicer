@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
@@ -22,60 +22,80 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-function NavDropdown({ item, location }: { item: NavItem; location: ReturnType<typeof useLocation> }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+function SidebarAccordion({
+  item,
+  location,
+}: {
+  item: NavItem;
+  location: ReturnType<typeof useLocation>;
+}) {
+  const allLinks = [
+    { path: item.path, label: item.label },
+    ...(item.children ?? []),
+  ];
 
   const isActive =
     location.pathname === item.path ||
     (item.path !== "/" && location.pathname.startsWith(item.path)) ||
     item.children?.some(
-      (c) => location.pathname === c.path || location.pathname.startsWith(c.path)
+      (c) =>
+        location.pathname === c.path || location.pathname.startsWith(c.path),
     );
 
+  const [open, setOpen] = useState(!!isActive);
+
   return (
-    <div ref={ref} className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <Link
-        to={item.path}
-        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer select-none ${
           isActive
-            ? "bg-indigo-100 text-indigo-700"
+            ? "text-indigo-700"
             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
         }`}
       >
-        {item.label}
-        <svg className="inline ml-1 w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        <span>{item.label}</span>
+        <svg
+          className={`w-3 h-3 opacity-50 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
-      </Link>
-      {open && (
-        <div className="absolute top-full left-0 mt-0 pt-1 z-50">
-          <div className="bg-white rounded-md shadow-lg border py-1 min-w-[160px]">
-            {item.children!.map((child) => (
-              <Link
-                key={child.path}
-                to={child.path}
-                onClick={() => setOpen(false)}
-                className={`block px-4 py-2 text-sm transition-colors ${
-                  location.pathname === child.path || location.pathname.startsWith(child.path)
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {child.label}
-              </Link>
-            ))}
+      </button>
+      <div
+        className={`grid transition-all duration-200 ease-in-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-0.5 ml-2 border-l border-gray-200 pl-2 flex flex-col gap-0.5 pb-0.5">
+            {allLinks.map((child) => {
+              const childActive =
+                location.pathname === child.path ||
+                (child.path !== "/" &&
+                  location.pathname.startsWith(child.path));
+              return (
+                <Link
+                  key={child.path}
+                  to={child.path}
+                  className={`block px-3 py-1.5 rounded-md text-sm transition-colors ${
+                    childActive
+                      ? "bg-indigo-100 text-indigo-700 font-medium"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  {child.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -104,63 +124,67 @@ export default function App() {
       children: [{ path: "/projects", label: "Projects" }],
     },
     {
-      path: "/time",
-      label: "Time Tracking",
+      path: "/invoices",
+      label: "Invoices",
       children: [
-        { path: "/invoices", label: "Invoices" },
+        { path: "/time", label: "Time Tracking" },
         { path: "/import", label: "Import" },
       ],
     },
     {
       path: "/settings",
       label: "Settings",
-      children: isAdmin ? [{ path: "/admin/invites", label: "Invites" }] : undefined,
+      children: isAdmin
+        ? [{ path: "/admin/invites", label: "Invites" }]
+        : undefined,
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center space-x-2">
-              <img src="/logo.png" alt="TimeForge" className="h-8" />
-              <span className="text-xl font-bold text-indigo-600">
-                TimeForge
-              </span>
-            </Link>
-            <div className="flex items-center space-x-1">
-              {navItems.map((item) =>
-                item.children ? (
-                  <NavDropdown key={item.path} item={item} location={location} />
-                ) : (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === item.path
-                        ? "bg-indigo-100 text-indigo-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              )}
-              {user && (
-                <button
-                  onClick={logout}
-                  className="ml-4 px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              )}
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 flex">
+      <aside className="w-56 shrink-0 bg-white border-r flex flex-col">
+        <div className="px-4 py-4 border-b">
+          <Link to="/" className="flex items-center space-x-2">
+            <img src="/logo.png" alt="TimeForge" className="h-8" />
+            <span className="text-xl font-bold text-indigo-600">TimeForge</span>
+          </Link>
         </div>
-      </nav>
+        <nav className="flex-1 px-2 py-4 flex flex-col gap-1">
+          {navItems.map((item) =>
+            item.children ? (
+              <SidebarAccordion
+                key={item.path}
+                item={item}
+                location={location}
+              />
+            ) : (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  location.pathname === item.path
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
+        </nav>
+        {user && (
+          <div className="px-2 py-4 border-t">
+            <button
+              onClick={logout}
+              className="w-full px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 text-left"
+            >
+              Logout
+            </button>
+          </div>
+        )}
+      </aside>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="flex-1 min-w-0 px-6 py-6">
         <Routes>
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />

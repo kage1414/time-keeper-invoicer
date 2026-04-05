@@ -14,7 +14,7 @@ const INVOICES_QUERY = `
   }
 `;
 
-const CLIENTS_QUERY = `query { clients { id name } }`;
+const CLIENTS_QUERY = `query { clients { id name company } }`;
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
@@ -54,7 +54,7 @@ export default function InvoicesPage() {
       <div className="flex gap-3 mb-4">
         <select className="border rounded p-2 text-sm" value={filterClient} onChange={(e) => setFilterClient(e.target.value)}>
           <option value="">All Clients</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {clients.map((c) => <option key={c.id} value={c.id}>{c.name || c.company}</option>)}
         </select>
         <select className="border rounded p-2 text-sm" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="">All Statuses</option>

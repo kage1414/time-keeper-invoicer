@@ -19,7 +19,21 @@
       "Bash(git commit:*)",
       "Bash(npx vite:*)",
       "Bash(node -e \"const XLSX = require\\(''xlsx''\\); console.log\\(''ok'', typeof XLSX.read\\)\")",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(npx tsx -e ':*)",
+      "Bash(DATABASE_PATH=../data/test.sqlite timeout 10 npx tsx src/index.ts)",
+      "Bash(docker exec:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker volume:*)",
+      "Bash(docker run:*)",
+      "Bash(DATABASE_PATH=../../data/db.sqlite PG_URL=postgresql://postgres:postgres@localhost:5433/invoicer npx tsx scripts/migrate-pg-to-sqlite.ts)",
+      "Bash(mkdir -p ../../data)",
+      "Bash(docker cp:*)",
+      "Bash(docker build:*)",
+      "Bash(2>&1)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(yarn remove:*)"
     ]
   }
 }
