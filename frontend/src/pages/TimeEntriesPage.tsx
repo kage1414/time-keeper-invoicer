@@ -234,17 +234,6 @@ export default function TimeEntriesPage() {
     },
   });
 
-  const unbillEntry = useMutation({
-    mutationFn: (id: number) =>
-      gql(`mutation($id: Int!) { unbillTimeEntry(id: $id) { id } }`, { id }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["timeEntries"] });
-      qc.invalidateQueries({ queryKey: ["invoices"] });
-      toast.success("Entry unbilled");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const creditEntry = useMutation({
     mutationFn: (id: number) =>
       gql(`mutation($id: Int!) { creditTimeEntry(id: $id) { id } }`, { id }),
@@ -449,9 +438,6 @@ export default function TimeEntriesPage() {
                         {e.duration_minutes && (
                           <button onClick={() => setConfirmAction({ message: `Create a $${amount.toFixed(2)} credit for this entry?`, onConfirm: () => creditEntry.mutate(e.id) })} className="text-green-600 hover:underline text-sm">Credit</button>
                         )}
-                        {e.invoice_id && (
-                          <button onClick={() => setConfirmAction({ message: "Unbill this entry? It will be removed from its invoice.", onConfirm: () => unbillEntry.mutate(e.id) })} className="text-indigo-600 hover:underline text-sm">Unbill</button>
-                        )}
                         {!e.invoice_id && (
                           <button onClick={() => setConfirmAction({ message: "Delete this time entry?", onConfirm: () => removeEntry.mutate(e.id) })} className="text-red-600 hover:underline text-sm">Delete</button>
                         )}
@@ -509,9 +495,6 @@ export default function TimeEntriesPage() {
                       <button onClick={() => openEditModal(e)} className="text-indigo-600 hover:underline">Edit</button>
                       {e.duration_minutes && (
                         <button onClick={() => setConfirmAction({ message: `Create a $${amount.toFixed(2)} credit for this entry?`, onConfirm: () => creditEntry.mutate(e.id) })} className="text-green-600 hover:underline">Credit</button>
-                      )}
-                      {e.invoice_id && (
-                        <button onClick={() => setConfirmAction({ message: "Unbill this entry? It will be removed from its invoice.", onConfirm: () => unbillEntry.mutate(e.id) })} className="text-indigo-600 hover:underline">Unbill</button>
                       )}
                       {!e.invoice_id && (
                         <button onClick={() => setConfirmAction({ message: "Delete this time entry?", onConfirm: () => removeEntry.mutate(e.id) })} className="text-red-600 hover:underline">Delete</button>
