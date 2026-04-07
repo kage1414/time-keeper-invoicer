@@ -29,10 +29,7 @@ function SidebarAccordion({
   item: NavItem;
   location: ReturnType<typeof useLocation>;
 }) {
-  const allLinks = [
-    { path: item.path, label: item.label },
-    ...(item.children ?? []),
-  ];
+  const allLinks = item.children ?? [];
 
   const isActive =
     location.pathname === item.path ||
@@ -156,8 +153,9 @@ export default function App() {
     },
     {
       path: "/invoices",
-      label: "Invoices",
+      label: "Billing",
       children: [
+        { path: "/invoices", label: "Invoices" },
         { path: "/time", label: "Time Tracking" },
         { path: "/import", label: "Import" },
       ],
