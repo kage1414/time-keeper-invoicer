@@ -409,103 +409,118 @@ export default function TimeEntriesPage() {
         <p className="text-gray-500 text-center py-8">No time entries found.</p>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left p-3">Project</th>
-                <th className="text-left p-3">Description</th>
-                <th className="text-left p-3">Start</th>
-                <th className="text-left p-3">End</th>
-                <th className="text-left p-3">Duration</th>
-                <th className="text-left p-3">Rate</th>
-                <th className="text-left p-3">Amount</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-right p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {completed.map((e) => {
-                const isFlat = e.flat_amount != null;
-                const rate = e.rate_override ?? e.default_rate;
-                const amount = isFlat ? Number(e.flat_amount) : (e.duration_minutes / 60) * Number(rate);
-                return (
-                  <tr key={e.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 font-medium">{e.project_name}</td>
-                    <td className="p-3">{e.description || "-"}</td>
-                    <td className="p-3">{e.start_time ? formatTime(e.start_time) : "—"}</td>
-                    <td className="p-3">
-                      {e.end_time ? formatTime(e.end_time) : "—"}
-                    </td>
-                    <td className="p-3">
-                      {isFlat ? "—" : formatDuration(e.duration_minutes)}
-                    </td>
-                    <td className="p-3">{isFlat ? "—" : `$${Number(rate).toFixed(2)}/hr`}</td>
-                    <td className="p-3">${amount.toFixed(2)}</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${e.invoice_id ? "bg-green-100 text-green-800" : !e.is_billable ? "bg-slate-100 text-slate-600" : "bg-yellow-100 text-yellow-800"}`}
-                      >
-                        {e.invoice_id
-                          ? "Billed"
-                          : !e.is_billable
-                            ? "Not Billable"
-                            : "Unbilled"}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right space-x-2">
-                      <button
-                        onClick={() => openEditModal(e)}
-                        className="text-indigo-600 hover:underline text-sm"
-                      >
-                        Edit
-                      </button>
-                      {e.duration_minutes && (
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-3">Project</th>
+                  <th className="text-left p-3">Description</th>
+                  <th className="text-left p-3">Start</th>
+                  <th className="text-left p-3">End</th>
+                  <th className="text-left p-3">Duration</th>
+                  <th className="text-left p-3">Rate</th>
+                  <th className="text-left p-3">Amount</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-right p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...completed].sort((a, b) => new Date(b.start_time ?? 0).getTime() - new Date(a.start_time ?? 0).getTime()).map((e) => {
+                  const isFlat = e.flat_amount != null;
+                  const rate = e.rate_override ?? e.default_rate;
+                  const amount = isFlat ? Number(e.flat_amount) : (e.duration_minutes / 60) * Number(rate);
+                  return (
+                    <tr key={e.id} className="border-t hover:bg-gray-50">
+                      <td className="p-3 font-medium">{e.project_name}</td>
+                      <td className="p-3 max-w-[160px] truncate" title={e.description || ""}>{e.description || "-"}</td>
+                      <td className="p-3">{e.start_time ? formatTime(e.start_time) : "—"}</td>
+                      <td className="p-3">{e.end_time ? formatTime(e.end_time) : "—"}</td>
+                      <td className="p-3">{isFlat ? "—" : formatDuration(e.duration_minutes)}</td>
+                      <td className="p-3">{isFlat ? "—" : `$${Number(rate).toFixed(2)}/hr`}</td>
+                      <td className="p-3">${amount.toFixed(2)}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${e.invoice_id ? "bg-green-100 text-green-800" : !e.is_billable ? "bg-slate-100 text-slate-600" : "bg-yellow-100 text-yellow-800"}`}>
+                          {e.invoice_id ? "Billed" : !e.is_billable ? "Not Billable" : "Unbilled"}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right space-x-2">
+                        <button onClick={() => openEditModal(e)} className="text-indigo-600 hover:underline text-sm">Edit</button>
+                        {e.duration_minutes && (
+                          <button onClick={() => setConfirmAction({ message: `Create a $${amount.toFixed(2)} credit for this entry?`, onConfirm: () => creditEntry.mutate(e.id) })} className="text-green-600 hover:underline text-sm">Credit</button>
+                        )}
+                        {e.invoice_id && (
+                          <button onClick={() => setConfirmAction({ message: "Unbill this entry? It will be removed from its invoice.", onConfirm: () => unbillEntry.mutate(e.id) })} className="text-indigo-600 hover:underline text-sm">Unbill</button>
+                        )}
+                        {!e.invoice_id && (
+                          <button onClick={() => setConfirmAction({ message: "Delete this time entry?", onConfirm: () => removeEntry.mutate(e.id) })} className="text-red-600 hover:underline text-sm">Delete</button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {[...completed].sort((a, b) => new Date(b.start_time ?? 0).getTime() - new Date(a.start_time ?? 0).getTime()).map((e) => {
+              const isFlat = e.flat_amount != null;
+              const rate = e.rate_override ?? e.default_rate;
+              const amount = isFlat ? Number(e.flat_amount) : (e.duration_minutes / 60) * Number(rate);
+              const tooltip = [
+                e.description ? `Description: ${e.description}` : null,
+                e.start_time ? `Start: ${formatTime(e.start_time)}` : null,
+                e.end_time ? `End: ${formatTime(e.end_time)}` : null,
+                !isFlat ? `Rate: $${Number(rate).toFixed(2)}/hr` : null,
+                !isFlat ? `Duration: ${formatDuration(e.duration_minutes)}` : null,
+                `Client: ${e.client_name}`,
+              ].filter(Boolean).join("\n");
+              return (
+                <div key={e.id} className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-sm truncate">{e.project_name}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium shrink-0 ${e.invoice_id ? "bg-green-100 text-green-800" : !e.is_billable ? "bg-slate-100 text-slate-600" : "bg-yellow-100 text-yellow-800"}`}>
+                          {e.invoice_id ? "Billed" : !e.is_billable ? "Not Billable" : "Unbilled"}
+                        </span>
                         <button
-                          onClick={() =>
-                            setConfirmAction({
-                              message: `Create a $${amount.toFixed(2)} credit for this entry?`,
-                              onConfirm: () => creditEntry.mutate(e.id),
-                            })
-                          }
-                          className="text-green-600 hover:underline text-sm"
+                          title={tooltip}
+                          className="text-gray-400 hover:text-gray-600 shrink-0"
+                          onClick={(ev) => { ev.preventDefault(); alert(tooltip); }}
                         >
-                          Credit
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
                         </button>
+                      </div>
+                      {e.description && (
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{e.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span>{e.start_time ? new Date(e.start_time).toLocaleDateString() : "—"}</span>
+                        <span className="font-medium text-gray-700">{isFlat ? "Flat" : formatDuration(e.duration_minutes)}</span>
+                        <span className="font-semibold text-gray-900">${amount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0 text-xs">
+                      <button onClick={() => openEditModal(e)} className="text-indigo-600 hover:underline">Edit</button>
+                      {e.duration_minutes && (
+                        <button onClick={() => setConfirmAction({ message: `Create a $${amount.toFixed(2)} credit for this entry?`, onConfirm: () => creditEntry.mutate(e.id) })} className="text-green-600 hover:underline">Credit</button>
                       )}
                       {e.invoice_id && (
-                        <button
-                          onClick={() =>
-                            setConfirmAction({
-                              message:
-                                "Unbill this entry? It will be removed from its invoice.",
-                              onConfirm: () => unbillEntry.mutate(e.id),
-                            })
-                          }
-                          className="text-indigo-600 hover:underline text-sm"
-                        >
-                          Unbill
-                        </button>
+                        <button onClick={() => setConfirmAction({ message: "Unbill this entry? It will be removed from its invoice.", onConfirm: () => unbillEntry.mutate(e.id) })} className="text-indigo-600 hover:underline">Unbill</button>
                       )}
                       {!e.invoice_id && (
-                        <button
-                          onClick={() =>
-                            setConfirmAction({
-                              message: "Delete this time entry?",
-                              onConfirm: () => removeEntry.mutate(e.id),
-                            })
-                          }
-                          className="text-red-600 hover:underline text-sm"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => setConfirmAction({ message: "Delete this time entry?", onConfirm: () => removeEntry.mutate(e.id) })} className="text-red-600 hover:underline">Delete</button>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
