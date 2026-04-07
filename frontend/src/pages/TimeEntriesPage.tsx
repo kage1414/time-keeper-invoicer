@@ -435,7 +435,7 @@ export default function TimeEntriesPage() {
                       </td>
                       <td className="p-3 text-right space-x-2">
                         <button onClick={() => openEditModal(e)} className="text-indigo-600 hover:underline text-sm">Edit</button>
-                        {e.duration_minutes && (
+                        {e.duration_minutes > 0 && (
                           <button onClick={() => setConfirmAction({ message: `Create a $${amount.toFixed(2)} credit for this entry?`, onConfirm: () => creditEntry.mutate(e.id) })} className="text-green-600 hover:underline text-sm">Credit</button>
                         )}
                         {!e.invoice_id && (
@@ -493,7 +493,7 @@ export default function TimeEntriesPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0 text-xs">
                       <button onClick={() => openEditModal(e)} className="text-indigo-600 hover:underline">Edit</button>
-                      {e.duration_minutes && (
+                      {e.duration_minutes > 0 && (
                         <button onClick={() => setConfirmAction({ message: `Create a $${amount.toFixed(2)} credit for this entry?`, onConfirm: () => creditEntry.mutate(e.id) })} className="text-green-600 hover:underline">Credit</button>
                       )}
                       {!e.invoice_id && (
