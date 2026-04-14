@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { gql } from '../api/client';
-import { Dashboard, Project } from '../types';
-import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { gql } from "../api/client";
+import { Dashboard, Project } from "../types";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const DASHBOARD_QUERY = `
   query {
@@ -31,40 +31,49 @@ function ElapsedTime({ startTime }: { startTime: string }) {
   const h = Math.floor(elapsed / 3600);
   const m = Math.floor((elapsed % 3600) / 60);
   const s = elapsed % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return <span className="font-mono text-green-700 text-xl font-bold">{pad(h)}:{pad(m)}:{pad(s)}</span>;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    <span className="font-mono text-green-700 text-xl font-bold">
+      {pad(h)}:{pad(m)}:{pad(s)}
+    </span>
+  );
 }
 
 export default function DashboardPage() {
   const qc = useQueryClient();
-  const [selectedProject, setSelectedProject] = useState('');
-  const [description, setDescription] = useState('');
+  const [selectedProject, setSelectedProject] = useState("");
+  const [description, setDescription] = useState("");
 
   const { data, isLoading } = useQuery<Dashboard>({
-    queryKey: ['dashboard'],
-    queryFn: async () => (await gql<{ dashboard: Dashboard }>(DASHBOARD_QUERY)).dashboard,
+    queryKey: ["dashboard"],
+    queryFn: async () =>
+      (await gql<{ dashboard: Dashboard }>(DASHBOARD_QUERY)).dashboard,
     refetchInterval: 10000,
   });
 
   const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ['projects'],
-    queryFn: async () => (await gql<{ projects: Project[] }>(PROJECTS_QUERY)).projects,
+    queryKey: ["projects"],
+    queryFn: async () =>
+      (await gql<{ projects: Project[] }>(PROJECTS_QUERY)).projects,
   });
 
   const startTimer = useMutation({
     mutationFn: () =>
-      gql(`mutation($input: CreateTimeEntryInput!) { createTimeEntry(input: $input) { id } }`, {
-        input: {
-          project_id: Number(selectedProject),
-          description: description || null,
-          start_time: new Date().toISOString(),
-          is_billable: true,
+      gql(
+        `mutation($input: CreateTimeEntryInput!) { createTimeEntry(input: $input) { id } }`,
+        {
+          input: {
+            project_id: Number(selectedProject),
+            description: description || null,
+            start_time: new Date().toISOString(),
+            is_billable: true,
+          },
         },
-      }),
+      ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['dashboard'] });
-      setDescription('');
-      toast.success('Timer started');
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setDescription("");
+      toast.success("Timer started");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -73,9 +82,9 @@ export default function DashboardPage() {
     mutationFn: (id: number) =>
       gql(`mutation($id: Int!) { stopTimeEntry(id: $id) { id } }`, { id }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['dashboard'] });
-      qc.invalidateQueries({ queryKey: ['timeEntries'] });
-      toast.success('Timer stopped');
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["timeEntries"] });
+      toast.success("Timer stopped");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -84,16 +93,16 @@ export default function DashboardPage() {
   if (!data) return null;
 
   const statusColors: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-800',
-    sent: 'bg-blue-100 text-blue-800',
-    paid: 'bg-green-100 text-green-800',
-    overdue: 'bg-red-100 text-red-800',
-    cancelled: 'bg-yellow-100 text-yellow-800',
+    draft: "bg-gray-100 text-gray-800",
+    sent: "bg-blue-100 text-blue-800",
+    paid: "bg-green-100 text-green-800",
+    overdue: "bg-red-100 text-red-800",
+    cancelled: "bg-yellow-100 text-yellow-800",
   };
 
   // Group projects by client for the dropdown
   const clientGroups = projects.reduce<Record<string, Project[]>>((acc, p) => {
-    const key = p.client_name || 'Unknown';
+    const key = p.client_name || "Unknown";
     if (!acc[key]) acc[key] = [];
     acc[key].push(p);
     return acc;
@@ -110,8 +119,14 @@ export default function DashboardPage() {
         <StatCard label="Clients" value={data.total_clients} />
         <StatCard label="Active Projects" value={data.active_projects} />
         <StatCard label="Unbilled Hours" value={data.unbilled_hours} />
-        <StatCard label="Unbilled Amount" value={`$${data.unbilled_amount.toFixed(2)}`} />
-        <StatCard label="Outstanding" value={`$${data.outstanding_amount.toFixed(2)}`} />
+        <StatCard
+          label="Unbilled Amount"
+          value={`$${data.unbilled_amount.toFixed(2)}`}
+        />
+        <StatCard
+          label="Outstanding"
+          value={`$${data.outstanding_amount.toFixed(2)}`}
+        />
         <StatCard label="Running Timers" value={data.running_timers.length} />
       </div>
 
@@ -125,15 +140,30 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <p className="font-medium text-gray-900">{timer.project_name}</p>
-                {timer.client_name && <p className="text-sm text-gray-500">{timer.client_name}</p>}
-                {timer.description && <p className="text-sm text-gray-500 mt-0.5">{timer.description}</p>}
+                <p className="font-medium text-gray-900">
+                  {timer.project_name}
+                </p>
+                {timer.client_name && (
+                  <p className="text-sm text-gray-500">{timer.client_name}</p>
+                )}
+                {timer.description && (
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {timer.description}
+                  </p>
+                )}
                 <div className="mt-2">
-                  {timer.start_time && <ElapsedTime startTime={timer.start_time} />}
+                  {timer.start_time && (
+                    <ElapsedTime startTime={timer.start_time} />
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Link to="/time" className="text-sm text-indigo-600 hover:underline">View all</Link>
+                <Link
+                  to="/time"
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  View all
+                </Link>
                 <button
                   onClick={() => stopTimer.mutate(timer.id)}
                   disabled={stopTimer.isPending}
@@ -148,7 +178,10 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-lg font-semibold mb-3">Quick Start Timer</h2>
             <form
-              onSubmit={(e) => { e.preventDefault(); if (selectedProject) startTimer.mutate(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (selectedProject) startTimer.mutate();
+              }}
               className="flex flex-col sm:flex-row gap-2"
             >
               <select
@@ -161,7 +194,9 @@ export default function DashboardPage() {
                 {Object.entries(clientGroups).map(([client, projs]) => (
                   <optgroup key={client} label={client}>
                     {projs.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
                     ))}
                   </optgroup>
                 ))}
@@ -188,7 +223,12 @@ export default function DashboardPage() {
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold">Recent Invoices</h2>
-          <Link to="/invoices" className="text-indigo-600 text-sm hover:underline">View all</Link>
+          <Link
+            to="/invoices"
+            className="text-indigo-600 text-sm hover:underline"
+          >
+            View all
+          </Link>
         </div>
         {data.recent_invoices.length === 0 ? (
           <p className="text-gray-500">No invoices yet</p>
@@ -207,14 +247,26 @@ export default function DashboardPage() {
                 {data.recent_invoices.map((inv) => (
                   <tr key={inv.id} className="border-b last:border-0">
                     <td className="py-2">
-                      <Link to={`/invoices/${inv.id}`} className="text-indigo-600 hover:underline">
+                      <Link
+                        to={`/invoices/${inv.id}`}
+                        className="text-indigo-600 hover:underline"
+                      >
                         {inv.invoice_number}
                       </Link>
                     </td>
-                    <td className="py-2">{inv.client_name}</td>
+                    <td className="py-2">
+                      <Link
+                        to={`/invoices/${inv.id}`}
+                        className="text-indigo-600 hover:underline"
+                      >
+                        {inv.client_name}
+                      </Link>
+                    </td>
                     <td className="py-2">${Number(inv.total).toFixed(2)}</td>
                     <td className="py-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[inv.status]}`}>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${statusColors[inv.status]}`}
+                      >
                         {inv.status}
                       </span>
                     </td>
