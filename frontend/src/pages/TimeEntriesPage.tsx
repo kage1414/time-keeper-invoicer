@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { gql } from "../api/client";
-import { TimeEntry, Project } from "../types";
+import { TimeEntry, Project, UserSettings } from "../types";
 import ConfirmModal from "../components/ConfirmModal";
 
-function ElapsedTime({ startTime }: { startTime: string }) {
+function ElapsedTime({ startTime, rate, showEarnings }: { startTime: string; rate?: number; showEarnings?: boolean }) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -19,9 +19,14 @@ function ElapsedTime({ startTime }: { startTime: string }) {
   const s = elapsed % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
 
+  const earnings = rate != null ? (elapsed / 3600) * rate : null;
+
   return (
     <span className="font-mono text-green-700">
       {pad(h)}:{pad(m)}:{pad(s)}
+      {showEarnings && earnings != null && (
+        <span className="ml-2 text-green-600">${earnings.toFixed(2)}</span>
+      )}
     </span>
   );
 }
@@ -43,6 +48,7 @@ const TIME_ENTRIES_QUERY = `
 `;
 
 const PROJECTS_QUERY = `query { projects { id name client_name is_active } }`;
+const USER_SETTINGS_QUERY = `query { userSettings { show_earnings_on_timer } }`;
 
 interface StartModalState {
   open: boolean;
@@ -125,6 +131,12 @@ export default function TimeEntriesPage() {
     queryKey: ["projects"],
     queryFn: async () =>
       (await gql<{ projects: Project[] }>(PROJECTS_QUERY)).projects,
+  });
+
+  const { data: userSettings } = useQuery<Pick<UserSettings, 'show_earnings_on_timer'>>({
+    queryKey: ["userSettings"],
+    queryFn: async () =>
+      (await gql<{ userSettings: Pick<UserSettings, 'show_earnings_on_timer'> }>(USER_SETTINGS_QUERY)).userSettings,
   });
 
   const vars: any = {};
@@ -345,7 +357,11 @@ export default function TimeEntriesPage() {
                   Started: {e.start_time ? formatTime(e.start_time) : "—"}
                 </span>
                 <span className="ml-3">
-                  <ElapsedTime startTime={e.start_time ?? new Date().toISOString()} />
+                  <ElapsedTime
+                    startTime={e.start_time ?? new Date().toISOString()}
+                    rate={e.rate_override ?? e.default_rate}
+                    showEarnings={userSettings?.show_earnings_on_timer}
+                  />
                 </span>
               </div>
               <div className="flex gap-2 items-center">

@@ -131,6 +131,7 @@ export const typeDefs = `#graphql
     smtp_from_email: String
     smtp_from_name: String
     default_email_template: String
+    show_earnings_on_timer: Boolean
     updated_at: String!
   }
 
@@ -158,6 +159,7 @@ export const typeDefs = `#graphql
     smtp_from_email: String
     smtp_from_name: String
     default_email_template: String
+    show_earnings_on_timer: Boolean
   }
 
   type User {

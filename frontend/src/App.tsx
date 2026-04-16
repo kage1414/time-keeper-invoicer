@@ -29,10 +29,7 @@ function SidebarAccordion({
   item: NavItem;
   location: ReturnType<typeof useLocation>;
 }) {
-  const allLinks = [
-    { path: item.path, label: item.label },
-    ...(item.children ?? []),
-  ];
+  const allLinks = item.children ?? [];
 
   const isActive =
     location.pathname === item.path ||
@@ -152,12 +149,16 @@ export default function App() {
     {
       path: "/clients",
       label: "Clients",
-      children: [{ path: "/projects", label: "Projects" }],
+      children: [
+        { path: "/clients", label: "Clients" },
+        { path: "/projects", label: "Projects" },
+      ],
     },
     {
       path: "/invoices",
-      label: "Invoices",
+      label: "Billing",
       children: [
+        { path: "/invoices", label: "Invoices" },
         { path: "/time", label: "Time Tracking" },
         { path: "/import", label: "Import" },
       ],
@@ -166,8 +167,11 @@ export default function App() {
       path: "/settings",
       label: "Settings",
       children: isAdmin
-        ? [{ path: "/admin/invites", label: "Invites" }]
-        : undefined,
+        ? [
+            { path: "/settings", label: "Settings" },
+            { path: "/admin/invites", label: "Invites" },
+          ]
+        : [{ path: "/settings", label: "Settings" }],
     },
   ];
 

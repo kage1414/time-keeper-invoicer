@@ -5,7 +5,7 @@ import { gql } from '../api/client';
 import { UserSettings, User } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
-const SETTINGS_FIELDS = 'id company first_name last_name email address1 address2 city state zip phone venmo cashapp paypal zelle default_due_days smtp_host smtp_port smtp_user smtp_pass smtp_secure smtp_from_email smtp_from_name default_email_template';
+const SETTINGS_FIELDS = 'id company first_name last_name email address1 address2 city state zip phone venmo cashapp paypal zelle default_due_days smtp_host smtp_port smtp_user smtp_pass smtp_secure smtp_from_email smtp_from_name default_email_template show_earnings_on_timer';
 
 const SETTINGS_QUERY = `query { userSettings { ${SETTINGS_FIELDS} } }`;
 
@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [smtpFromEmail, setSmtpFromEmail] = useState('');
   const [smtpFromName, setSmtpFromName] = useState('');
   const [emailTemplate, setEmailTemplate] = useState('');
+  const [showEarningsOnTimer, setShowEarningsOnTimer] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -83,6 +84,7 @@ export default function SettingsPage() {
       setSmtpFromEmail(settings.smtp_from_email || '');
       setSmtpFromName(settings.smtp_from_name || '');
       setEmailTemplate(settings.default_email_template || '');
+      setShowEarningsOnTimer(settings.show_earnings_on_timer ?? false);
     }
   }, [settings]);
 
@@ -113,6 +115,7 @@ export default function SettingsPage() {
           smtp_from_email: smtpFromEmail || null,
           smtp_from_name: smtpFromName || null,
           default_email_template: emailTemplate || null,
+          show_earnings_on_timer: showEarningsOnTimer,
         },
       }),
     onSuccess: () => {
@@ -242,6 +245,19 @@ export default function SettingsPage() {
               <input className="border rounded p-2 w-full" placeholder="email or phone" value={zelle} onChange={(e) => setZelle(e.target.value)} />
             </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <h2 className="font-semibold mb-4">Display</h2>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showEarningsOnTimer}
+              onChange={(e) => setShowEarningsOnTimer(e.target.checked)}
+            />
+            Show dollar amount on running timers
+          </label>
+          <p className="text-xs text-gray-400 mt-1">Display live earnings next to the elapsed time counter based on the project rate.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow p-4">
